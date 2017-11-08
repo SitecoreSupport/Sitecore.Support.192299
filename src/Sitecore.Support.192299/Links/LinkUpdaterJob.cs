@@ -1,8 +1,8 @@
 ﻿namespace Sitecore.Support.Links
 {
   using System.Collections.Generic;
+  using System.Linq;
   using Sitecore;
-  using Sitecore.Configuration;
   using Sitecore.Data;
   using Sitecore.Data.Fields;
   using Sitecore.Data.Items;
@@ -67,16 +67,20 @@
 
       var linkDatabase = this.LinkDatabase;
 
-      foreach (ItemUri uri in updatedItemVersions)
+      var uniqueItemsToBeUpdated = from touchedUri in updatedItemVersions
+                                   let modifiedItemVersion = Database.GetItem(touchedUri)
+                                   where modifiedItemVersion != null
+                                   group modifiedItemVersion by new
+                                   {
+                                     modifiedItemVersion.Database.Name,
+                                     modifiedItemVersion.ID
+                                   }
+                                   into uniqueItemIdDatabasePair
+                                   select uniqueItemIdDatabasePair.FirstOrDefault();
+
+      foreach (var uniqueItem in uniqueItemsToBeUpdated)
       {
-        Item item = Database.GetItem(uri);
-
-        if (item == null)
-        {
-          continue;
-        }
-
-        linkDatabase.UpdateReferences(item);
+        linkDatabase.UpdateReferences(uniqueItem);
       }
     }
 
